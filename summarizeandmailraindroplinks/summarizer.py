@@ -32,6 +32,12 @@ class Summarizer:
 
     def summarize(self, text: str, images: Optional[List[str]] = None) -> str:
         include_images = self._should_include_images(text, images or [])
+        logger.info(
+            "Summarization request: chars=%s images=%s include_images=%s",
+            len(text),
+            len(images or []),
+            include_images,
+        )
         user_content = self._build_user_content(text, images or [], include_images)
         try:
             response = self._client.chat.completions.create(

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Tuple
 
-from .config import JST, SUMMARY_CHAR_LIMIT, TAG_FAILED
+from .config import JST, SUMMARY_CHAR_LIMIT
 from .models import EmailContext, SummaryResult
 
 
@@ -58,8 +58,6 @@ def build_email_body(batch_date: datetime, results: List[SummaryResult]) -> Tupl
     for idx, result in enumerate(results, start=1):
         item = result.item
         lines.append(f"{idx}. タイトル: {item.title}")
-        author_display = result.author or "名無しの投稿者（情報不足）"
-        lines.append(f"著者/投稿者: {author_display}")
         lines.append(f"URL: {item.link}")
         lines.append(f"追加日時: {format_datetime_jst(item.created)}")
         lines.append("\n▼サマリー")
@@ -73,9 +71,7 @@ def build_email_body(batch_date: datetime, results: List[SummaryResult]) -> Tupl
 
         html_parts.append('<div class="card">')
         html_parts.append(f"<h2>{idx}. {item.title}</h2>")
-        html_parts.append(
-            f'<p class="meta">{author_display} ・ <a href="{item.link}">こちらをクリック</a> ・ {format_datetime_jst(item.created)}</p>'
-        )
+        html_parts.append(f'<p class="meta"><a href="{item.link}">こちらをクリック</a> ・ {format_datetime_jst(item.created)}</p>')
         html_parts.append('<div class="summary"><strong>▼サマリー</strong><br>')
         if result.is_success() and result.summary:
             html_parts.append(result.summary.strip().replace("\n", "<br>"))

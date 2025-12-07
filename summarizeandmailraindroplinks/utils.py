@@ -59,20 +59,5 @@ def trim_text(text: str, max_chars: int) -> str:
     return text[:max_chars]
 
 
-def split_author_and_summary(summary: str) -> tuple[str, str]:
-    lines = [line.strip() for line in summary.splitlines() if line.strip()]
-    if not lines:
-        return "名無しの投稿者（情報不足）", summary
-
-    first = lines[0]
-    prefixes = ("著者/投稿者:", "著者:", "投稿者:")
-    if any(first.startswith(p) for p in prefixes):
-        author_value = first.split(":", 1)[1].strip() or "名無しの投稿者（情報不足）"
-        remaining = "\n".join(lines[1:]).strip()
-        return author_value, remaining or summary
-
-    return "名無しの投稿者（情報不足）", summary
-
-
 def threshold_from_now(now_jst: datetime, days: int) -> datetime:
     return now_jst - timedelta(days=days)

@@ -22,7 +22,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
 
-      - name: Fetch & filter Raindrop items
+      - name: Run batch
         env:
           RAINDROP_TOKEN: ${{ secrets.RAINDROP_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -32,11 +32,3 @@ jobs:
           FROM_NAME: ${{ vars.FROM_NAME }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
         run: python main.py
-
-      - name: Summarize contents
-        if: ${{ always() }} # reuse same run, step name reflects phase
-        run: echo "Summarization handled inside python main.py"
-
-      - name: Deliver email & update Raindrop
-        if: ${{ always() }} # reuse same run, step name reflects phase
-        run: echo "Delivery handled inside python main.py"
