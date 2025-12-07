@@ -17,8 +17,7 @@ if TYPE_CHECKING:  # pragma: no cover - type checking only
 else:
     OpenAIType = Any
 
-from .config import IMAGE_TEXT_THRESHOLD, MIN_IMAGES_FOR_SUMMARY
-from .prompts import summarization_system_prompt
+from .config import DEFAULT_SYSTEM_PROMPT, IMAGE_TEXT_THRESHOLD, MIN_IMAGES_FOR_SUMMARY
 
 logger = logging.getLogger(__name__)
 
@@ -36,12 +35,19 @@ class SummaryRateLimitError(SummaryError):
 
 
 class Summarizer:
-    def __init__(self, api_key: str, model: str = "gpt-4.1-mini", client: Optional[OpenAIType] = None):
+    def __init__(
+        self,
+        api_key: str,
+        model: str = "gpt-4.1-mini",
+        client: Optional[OpenAIType] = None,
+        system_prompt: Optional[str] = None,
+    ):
         if not model or not model.strip():
             raise ValueError("OpenAI model must be provided.")
         self._client = client or self._build_client(api_key)
         self._model = model.strip()
         self._rate_limit_error, self._connection_errors = self._load_error_classes(client is None)
+        self._system_prompt = (system_prompt or DEFAULT_SYSTEM_PROMPT).strip()
 
     @staticmethod
     def _build_client(api_key: str) -> OpenAIType:
@@ -72,7 +78,7 @@ class Summarizer:
                 messages=[
                     {
                         "role": "system",
-                        "content": summarization_system_prompt(),
+                        "content": self._system_prompt,
                     },
                     {"role": "user", "content": user_content},
                 ],

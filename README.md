@@ -351,6 +351,8 @@ main():
   Raindrop API トークン
 * `OPENAI_API_KEY`
 * `SENDGRID_API_KEY`
+* `SUMMARY_SYSTEM_PROMPT`
+  要約用プロンプト文字列（未設定時はデフォルトプロンプトを使用）
 
 ### 9.3 GitHub Actions Variables（機密でないもの）
 
@@ -375,6 +377,7 @@ main():
    export RAINDROP_TOKEN=...
    export OPENAI_API_KEY=...
    export SENDGRID_API_KEY=...
+   export SUMMARY_SYSTEM_PROMPT="（必要に応じてカスタムプロンプトをここに書く）"
    export TO_EMAIL=...
    export FROM_EMAIL=...
    export FROM_NAME="Raindrop要約メール配信サービス"
@@ -395,8 +398,8 @@ main():
 
 ### 9.5 プロンプト編集
 
-* 要約プロンプトは `summarizeandmailraindroplinks/prompts.py` に集約。
-* 文字数制限や出力フォーマットを調整する場合は、このファイルを編集する。
+* 要約プロンプトは GitHub Actions Secret `SUMMARY_SYSTEM_PROMPT` またはローカル環境変数 `SUMMARY_SYSTEM_PROMPT` で上書きする。
+* 未設定時はコード内のデフォルトプロンプト（約500文字制限を含む）が使われる。
 
 ---
 

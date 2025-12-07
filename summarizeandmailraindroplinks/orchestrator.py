@@ -22,7 +22,11 @@ def run(settings: config.Settings) -> List[SummaryResult]:
     threshold = threshold_from_now(now_jst, BATCH_LOOKBACK_DAYS)
 
     raindrop = RaindropClient(token=settings.raindrop_token)
-    summarizer = Summarizer(api_key=settings.openai_api_key, model=settings.openai_model)
+    summarizer = Summarizer(
+        api_key=settings.openai_api_key,
+        model=settings.openai_model,
+        system_prompt=settings.summary_system_prompt,
+    )
     mailer = Mailer(
         api_key=settings.sendgrid_api_key,
         from_email=settings.from_email,
