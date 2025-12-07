@@ -24,10 +24,10 @@ class ExtractionError(Exception):
 def detect_source(url: str) -> str:
     parsed = urlparse(url)
     host = parsed.hostname or ""
-    if "youtube.com" in host or "youtu.be" in host:
-        return "youtube"
     if host.endswith("x.com") or host.endswith("twitter.com"):
         return "x"
+    if "youtube.com" in host or "youtu.be" in host:
+        return "youtube"
     return "web"
 
 
@@ -46,11 +46,10 @@ def extract_text(url: str) -> ExtractedContent:
     source = detect_source(url)
     if source == "x":
         raise ExtractionError("Xリンクは手動確認対象のため自動要約しません。")
-    html_text = fetch_html(url)
     if source == "youtube":
-        text, images = _extract_youtube(html_text)
-    else:
-        text, images = _extract_readability(html_text, url)
+        raise ExtractionError("YouTubeリンクは手動確認対象のため自動要約しません。")
+    html_text = fetch_html(url)
+    text, images = _extract_readability(html_text, url)
     cleaned = text.strip()
     if not cleaned:
         raise ExtractionError("Extracted text is empty.")

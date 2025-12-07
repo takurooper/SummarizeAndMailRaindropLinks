@@ -26,11 +26,10 @@ def test_build_email_subject():
 
 def test_build_email_body_success_and_failure():
     item = _item()
-    success = SummaryResult(item=item, status="success", summary="Summary text", author="テストユーザー")
+    success = SummaryResult(item=item, status="success", summary="Summary text")
     failure = SummaryResult(item=item, status="failed", error="oops")
     text_body, html_body = build_email_body(datetime(2024, 12, 7, tzinfo=timezone.utc), [success, failure])
     assert "Example Title" in text_body
     assert "Summary text" in text_body
     assert "要約に失敗" in text_body
     assert '<a href="https://example.com">こちらをクリック</a>' in html_body
-    assert "テストユーザー" in text_body

@@ -11,7 +11,7 @@ from .models import SummaryResult
 from .raindrop_client import RaindropClient
 from .summarizer import Summarizer, SummaryConnectionError, SummaryError, SummaryRateLimitError
 from .text_extractor import ExtractionError, extract_text
-from .utils import filter_new_items, split_author_and_summary, threshold_from_now, to_jst, utc_now
+from .utils import filter_new_items, threshold_from_now, to_jst, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -47,14 +47,20 @@ def run(settings: config.Settings) -> List[SummaryResult]:
             logger.info("Empty report sent.")
             return results
 
-        for item in targets:
+        for idx, item in enumerate(targets, start=1):
+            logger.info("---- Processing item %s/%s ----", idx, len(targets))
+            logger.info("Raindrop id=%s title=%s", item.id, item.title)
+            logger.info("link=%s", item.link)
             try:
                 content = extract_text(item.link)
-                summary_text = summarizer.summarize(content.text, content.images)
-                author, cleaned_summary = split_author_and_summary(summary_text)
-                results.append(
-                    SummaryResult(item=item, status="success", summary=cleaned_summary, author=author)
+                logger.info(
+                    "Extracted content: chars=%s images=%s source=%s",
+                    content.length,
+                    len(content.images),
+                    content.source,
                 )
+                summary_text = summarizer.summarize(content.text, content.images)
+                results.append(SummaryResult(item=item, status="success", summary=summary_text))
             except SummaryRateLimitError as exc:
                 logger.exception("OpenAI rate limit hit for item %s: %s", item.id, exc)
                 raise

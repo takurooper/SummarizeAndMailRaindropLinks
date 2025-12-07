@@ -63,7 +63,7 @@
 5. 各URLに対して HTML を取得し、本文テキストを抽出。
 
    * YouTube URLの場合はタイトル＋説明文を取得。
-6. 抽出テキストを OpenAI API に渡し、日本語で最大500文字の要約＋自分用メモ/キーワードを生成。
+6. 抽出テキストを OpenAI API に渡し、日本語で最大500文字の要約＋今後の自分のAction Planを示唆する
 7. 要約結果を集約してメール本文を構築し、SendGrid API で自分宛に送信。
 8. 送信に成功したアイテムに対し、Raindrop API で
 
@@ -113,7 +113,7 @@
 
     1. 一行要約
     2. 内容の要点（箇条書き or 2〜3行）
-    3. 自分へのメモ / キーワード（箇条書き）
+    3. 今後の自分のAction Plan
 
 ### F-4. メール生成・送信
 
@@ -351,12 +351,52 @@ main():
   Raindrop API トークン
 * `OPENAI_API_KEY`
 * `SENDGRID_API_KEY`
-* `TO_EMAIL`
-  宛先メールアドレス
-* `FROM_EMAIL`
-  送信元メールアドレス
-* （任意）`OPENAI_MODEL`
-  使用モデル名（デフォルト `gpt-4.1-mini`）
+
+### 9.3 GitHub Actions Variables（機密でないもの）
+
+* `TO_EMAIL` 宛先メールアドレス
+* `FROM_EMAIL` 送信元メールアドレス
+* `FROM_NAME` 送信元表示名（例: `Raindrop要約メール配信サービス`）
+* （任意）`OPENAI_MODEL` 使用モデル名（デフォルト `gpt-4.1-mini`）
+
+### 9.4 ローカル開発セットアップ
+
+1. Python 3.11 以上を準備（推奨）
+2. [uv](https://docs.astral.sh/uv/) をインストール
+3. 依存インストール
+
+   ```bash
+   uv sync
+   ```
+
+4. 必要な環境変数をセット（ローカルでは `.env` やシェルで設定）
+
+   ```bash
+   export RAINDROP_TOKEN=...
+   export OPENAI_API_KEY=...
+   export SENDGRID_API_KEY=...
+   export TO_EMAIL=...
+   export FROM_EMAIL=...
+   export FROM_NAME="Raindrop要約メール配信サービス"
+   export OPENAI_MODEL="gpt-4.1-mini"
+   ```
+
+5. 実行
+
+   ```bash
+   uv run python main.py
+   ```
+
+6. テスト
+
+   ```bash
+   uv run pytest
+   ```
+
+### 9.5 プロンプト編集
+
+* 要約プロンプトは `summarizeandmailraindroplinks/prompts.py` に集約。
+* 文字数制限や出力フォーマットを調整する場合は、このファイルを編集する。
 
 ---
 
@@ -394,6 +434,13 @@ main():
 
   * 処理を中断し、ログに詳細を出力。
   * 再実行は手動トリガーで行う想定。
+
+### 10.5 実装との差分・補足
+
+* X / YouTube リンクは自動要約せず「要約失敗（手動確認）」として扱う。
+* 本文抽出時、本文が 1000 文字以下かつ画像が 3 枚以上ある場合は、画像 URL も LLM に渡してマルチモーダル要約する（本文順で添付）。それ以外はテキストのみ。
+* メールはプレーンテキスト＋HTML（カード風デザイン）で送信される。
+* ログは GA 標準出力に詳細を出し、各リンク処理ごとに区切って記録する。
 
 ### 10.4 ログ出力
 
