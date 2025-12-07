@@ -44,11 +44,11 @@ def fetch_html(url: str) -> str:
 
 def extract_text(url: str) -> ExtractedContent:
     source = detect_source(url)
+    if source == "x":
+        raise ExtractionError("Xリンクは有料会員にならないと文字列抽出できないため要約しません。")
     html_text = fetch_html(url)
     if source == "youtube":
         text = _extract_youtube(html_text)
-    elif source == "x":
-        text = _extract_x(html_text)
     else:
         text = _extract_readability(html_text, url)
     cleaned = text.strip()
