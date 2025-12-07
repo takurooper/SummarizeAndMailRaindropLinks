@@ -11,7 +11,7 @@ from .models import SummaryResult
 from .raindrop_client import RaindropClient
 from .summarizer import Summarizer, SummaryConnectionError, SummaryError, SummaryRateLimitError
 from .text_extractor import ExtractionError, extract_text
-from .utils import filter_new_items, threshold_from_now, to_jst, utc_now
+from .utils import filter_new_items, split_author_and_summary, threshold_from_now, to_jst, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +41,9 @@ def run(settings: config.Settings) -> List[SummaryResult]:
         if not targets:
             logger.info("No new items to process; sending empty report.")
             subject = build_email_subject(now_jst)
-            empty_body = "こんにちは。過去3日分のブックマークは0件でした。"
-            mailer.send(subject, empty_body)
+            empty_text = "こんにちは。過去3日分のブックマークは0件でした。"
+            empty_html = "<p>こんにちは。過去3日分のブックマークは0件でした。</p>"
+            mailer.send(subject, empty_text, empty_html)
             logger.info("Empty report sent.")
             return results
 
@@ -50,7 +51,10 @@ def run(settings: config.Settings) -> List[SummaryResult]:
             try:
                 content = extract_text(item.link)
                 summary_text = summarizer.summarize(content.text)
-                results.append(SummaryResult(item=item, status="success", summary=summary_text))
+                author, cleaned_summary = split_author_and_summary(summary_text)
+                results.append(
+                    SummaryResult(item=item, status="success", summary=cleaned_summary, author=author)
+                )
             except SummaryRateLimitError as exc:
                 logger.exception("OpenAI rate limit hit for item %s: %s", item.id, exc)
                 raise
@@ -65,9 +69,9 @@ def run(settings: config.Settings) -> List[SummaryResult]:
                 results.append(SummaryResult(item=item, status="failed", error=str(exc)))
 
         subject = build_email_subject(now_jst)
-        body = build_email_body(now_jst, results)
+        text_body, html_body = build_email_body(now_jst, results)
         try:
-            mailer.send(subject, body)
+            mailer.send(subject, text_body, html_body)
         except MailError as exc:
             logger.exception("Mail sending failed: %s", exc)
             failure_body = f"要約メール送信に失敗しました。\nerror={exc}\n対象数={len(results)}"

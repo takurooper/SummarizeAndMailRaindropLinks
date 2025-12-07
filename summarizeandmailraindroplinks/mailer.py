@@ -18,12 +18,13 @@ class Mailer:
         self._from_email = Email(email=from_email, name=from_name)
         self._to_email = to_email
 
-    def send(self, subject: str, body: str) -> None:
+    def send(self, subject: str, text_body: str, html_body: str | None = None) -> None:
         mail = Mail(
             from_email=self._from_email,
             to_emails=self._to_email,
             subject=subject,
-            plain_text_content=body,
+            plain_text_content=text_body,
+            html_content=html_body,
         )
         try:
             response = self._client.send(mail)

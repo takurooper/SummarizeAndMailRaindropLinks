@@ -27,6 +27,7 @@ class SummaryResult:
     item: RaindropItem
     status: str  # "success" | "failed"
     summary: Optional[str] = None
+    author: Optional[str] = None
     error: Optional[str] = None
 
     def is_success(self) -> bool:
