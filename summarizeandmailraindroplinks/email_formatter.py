@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Tuple
 
-from .config import JST, SUMMARY_CHAR_LIMIT
+from .config import JST, SUMMARY_CHAR_LIMIT, BATCH_LOOKBACK_DAYS
 from .models import EmailContext, SummaryResult
 
 
@@ -13,13 +13,13 @@ def format_datetime_jst(dt: datetime) -> str:
 
 def build_email_subject(batch_date: datetime) -> str:
     date_str = batch_date.astimezone(JST).strftime("%Y-%m-%d")
-    return f"【要約まとめ】{date_str} 直近3日版"
+    return f"【要約まとめ】{date_str} 直近{BATCH_LOOKBACK_DAYS}日版"
 
 
 def build_email_body(batch_date: datetime, results: List[SummaryResult]) -> Tuple[str, str]:
-    text_header = "こんにちは。過去3日分のブックマークしたリンクの要約です。\n"
+    text_header = f"こんにちは。過去{BATCH_LOOKBACK_DAYS}日分のブックマークしたリンクの要約です。\n"
     html_parts = [
-        """
+        f"""
 <!doctype html>
 <html>
 <head>
@@ -40,7 +40,7 @@ def build_email_body(batch_date: datetime, results: List[SummaryResult]) -> Tupl
 </head>
 <body>
   <div class="container">
-    <p class="title">過去3日分のブックマーク要約</p>
+    <p class="title">過去{BATCH_LOOKBACK_DAYS}日分のブックマーク要約</p>
 """
     ]
     if not results:
