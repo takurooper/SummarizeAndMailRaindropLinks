@@ -1,9 +1,21 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Sequence
+from typing import Any, List, Optional, Sequence, Tuple, Type, TYPE_CHECKING
 
-from openai import APIConnectionError, APITimeoutError, OpenAI, RateLimitError
+try:
+    from openai import APIConnectionError, APITimeoutError, OpenAI, RateLimitError
+except ModuleNotFoundError:  # pragma: no cover - fallback for environments without openai installed
+    APIConnectionError = APITimeoutError = RateLimitError = None  # type: ignore[assignment]
+    OpenAI = None  # type: ignore[assignment]
+
+if TYPE_CHECKING:  # pragma: no cover - type checking only
+    from openai import APIConnectionError as APIConnectionErrorType
+    from openai import APITimeoutError as APITimeoutErrorType
+    from openai import OpenAI as OpenAIType
+    from openai import RateLimitError as RateLimitErrorType
+else:
+    OpenAIType = Any
 
 from .config import IMAGE_TEXT_THRESHOLD, MIN_IMAGES_FOR_SUMMARY
 from .prompts import summarization_system_prompt
@@ -24,11 +36,26 @@ class SummaryRateLimitError(SummaryError):
 
 
 class Summarizer:
-    def __init__(self, api_key: str, model: str = "gpt-4.1-mini", client: Optional[OpenAI] = None):
+    def __init__(self, api_key: str, model: str = "gpt-4.1-mini", client: Optional[OpenAIType] = None):
         if not model or not model.strip():
             raise ValueError("OpenAI model must be provided.")
-        self._client = client or OpenAI(api_key=api_key)
+        self._client = client or self._build_client(api_key)
         self._model = model.strip()
+        self._rate_limit_error, self._connection_errors = self._load_error_classes(client is None)
+
+    @staticmethod
+    def _build_client(api_key: str) -> OpenAIType:
+        if OpenAI is None:  # pragma: no cover - requires openai installed
+            raise SummaryError("openai package is required to create an OpenAI client.")
+        return OpenAI(api_key=api_key)
+
+    @staticmethod
+    def _load_error_classes(require_openai: bool) -> Tuple[Type[Exception], Tuple[Type[Exception], ...]]:
+        if RateLimitError is None or APIConnectionError is None or APITimeoutError is None:
+            if require_openai:
+                raise SummaryError("openai package is required for summarization.")
+            return Exception, (Exception, Exception)
+        return RateLimitError, (APIConnectionError, APITimeoutError)
 
     def summarize(self, text: str, images: Optional[List[str]] = None) -> str:
         include_images = self._should_include_images(text, images or [])
@@ -45,9 +72,9 @@ class Summarizer:
                 ],
                 temperature=0.3,
             )
-        except RateLimitError as exc:
+        except self._rate_limit_error as exc:  # type: ignore[misc]
             raise SummaryRateLimitError(f"OpenAI rate limit: {exc}") from exc
-        except (APIConnectionError, APITimeoutError) as exc:
+        except self._connection_errors as exc:  # type: ignore[misc]
             raise SummaryConnectionError(f"OpenAI connection failed: {exc}") from exc
         except Exception as exc:  # noqa: BLE001
             raise SummaryError(f"OpenAI API call failed: {exc}") from exc

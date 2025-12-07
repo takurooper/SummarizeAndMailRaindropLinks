@@ -4,8 +4,6 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Iterable, List
 
-from dateutil import parser
-
 from .config import JST, TAG_CONFIRMED, TAG_DELIVERED, TAG_FAILED
 from .models import RaindropItem
 
@@ -21,8 +19,11 @@ def to_jst(dt: datetime) -> datetime:
 
 
 def parse_raindrop_datetime(value: str) -> datetime:
-    parsed = parser.isoparse(value)
-    return parsed
+    normalized = value.replace("Z", "+00:00") if value.endswith("Z") else value
+    try:
+        return datetime.fromisoformat(normalized)
+    except ValueError as exc:
+        raise ValueError(f"Invalid datetime format: {value}") from exc
 
 
 def is_recent(item: RaindropItem, threshold_jst: datetime) -> bool:
