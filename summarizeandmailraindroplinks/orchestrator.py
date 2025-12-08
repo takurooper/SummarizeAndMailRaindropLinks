@@ -22,14 +22,22 @@ def run(settings: config.Settings) -> List[SummaryResult]:
     threshold = threshold_from_now(now_jst, BATCH_LOOKBACK_DAYS)
 
     raindrop = RaindropClient(token=settings.raindrop_token)
-    summarizer = Summarizer(api_key=settings.openai_api_key, model=settings.openai_model)
+    summarizer = Summarizer(
+        api_key=settings.openai_api_key,
+        model=settings.openai_model,
+        system_prompt=settings.summary_system_prompt,
+    )
     mailer = Mailer(
         api_key=settings.sendgrid_api_key,
         from_email=settings.from_email,
         from_name=settings.from_name,
         to_email=settings.to_email,
     )
-    logger.info("Using OpenAI model=%s", settings.openai_model)
+    logger.info(
+        "Using OpenAI model=%s prompt_source=%s",
+        settings.openai_model,
+        "env:SUMMARY_SYSTEM_PROMPT" if settings.summary_system_prompt else "default",
+    )
 
     failure_notified = False
     try:
@@ -41,8 +49,8 @@ def run(settings: config.Settings) -> List[SummaryResult]:
         if not targets:
             logger.info("No new items to process; sending empty report.")
             subject = build_email_subject(now_jst)
-            empty_text = "こんにちは。過去3日分のブックマークは0件でした。"
-            empty_html = "<p>こんにちは。過去3日分のブックマークは0件でした。</p>"
+            empty_text = f"過去{BATCH_LOOKBACK_DAYS}日分の保存リンクは0件でした。"
+            empty_html = f"<p>過去{BATCH_LOOKBACK_DAYS}日分の保存リンクは0件でした。</p>"
             mailer.send(subject, empty_text, empty_html)
             logger.info("Empty report sent.")
             return results
@@ -53,12 +61,19 @@ def run(settings: config.Settings) -> List[SummaryResult]:
             logger.info("link=%s", item.link)
             try:
                 content = extract_text(item.link)
-                logger.info(
-                    "Extracted content: chars=%s images=%s source=%s",
-                    content.length,
-                    len(content.images),
-                    content.source,
-                )
+                if content.image_extraction_attempted:
+                    logger.info(
+                        "Extracted content: chars=%s images=%s source=%s",
+                        content.length,
+                        len(content.images or []),
+                        content.source,
+                    )
+                else:
+                    logger.info(
+                        "Extracted content: chars=%s source=%s (image extraction skipped: text too long)",
+                        content.length,
+                        content.source,
+                    )
                 summary_text = summarizer.summarize(content.text, content.images)
                 results.append(SummaryResult(item=item, status="success", summary=summary_text))
             except SummaryRateLimitError as exc:

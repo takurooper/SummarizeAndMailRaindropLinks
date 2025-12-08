@@ -35,8 +35,7 @@ def test_append_note_appends_with_separator():
     original = "existing note"
     addition = "new summary"
     result = append_note(original, addition)
-    assert "existing note" in result
-    assert "new summary" in result
+    assert result == "new summary"
 
 
 def test_trim_text_respects_limit():

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Tuple
 
-from .config import JST, SUMMARY_CHAR_LIMIT
+from .config import JST, SUMMARY_CHAR_LIMIT, BATCH_LOOKBACK_DAYS
 from .models import EmailContext, SummaryResult
 
 
@@ -13,11 +13,11 @@ def format_datetime_jst(dt: datetime) -> str:
 
 def build_email_subject(batch_date: datetime) -> str:
     date_str = batch_date.astimezone(JST).strftime("%Y-%m-%d")
-    return f"【要約まとめ】{date_str} 直近3日版"
+    return f"【要約まとめ】{date_str} 直近{BATCH_LOOKBACK_DAYS}日版"
 
 
 def build_email_body(batch_date: datetime, results: List[SummaryResult]) -> Tuple[str, str]:
-    text_header = "こんにちは。過去3日分のブックマークしたリンクの要約です。\n"
+    text_header = f"過去{BATCH_LOOKBACK_DAYS}日分のブックマークしたリンクの要約です。\n"
     html_parts = [
         """
 <!doctype html>
@@ -25,23 +25,23 @@ def build_email_body(batch_date: datetime, results: List[SummaryResult]) -> Tupl
 <head>
 <meta charset="UTF-8" />
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f7f8fb; color: #1c1d21; margin: 0; padding: 0; }
-  .container { max-width: 720px; margin: 0 auto; padding: 24px 16px 40px; }
-  .title { font-size: 20px; font-weight: 700; margin: 0 0 16px 0; }
-  .card { background: #ffffff; border-radius: 12px; padding: 16px 18px; margin: 0 0 16px 0; box-shadow: 0 8px 24px rgba(0,0,0,0.06); border: 1px solid #e6e8f0; }
-  .card h2 { margin: 0 0 8px 0; font-size: 16px; }
-  .meta { color: #5b6071; font-size: 13px; margin: 0 0 10px 0; }
-  .summary { line-height: 1.6; font-size: 14px; color: #1f2430; }
-  .summary strong { color: #111; }
-  .footer { color: #7a7f92; font-size: 12px; margin-top: 24px; }
-  a { color: #2d6cdf; text-decoration: none; }
-  a:hover { text-decoration: underline; }
+  body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f7f8fb; color: #1c1d21; margin: 0; padding: 0; }}
+  .container {{ max-width: 720px; margin: 0 auto; padding: 24px 16px 40px; }}
+  .title {{ font-size: 20px; font-weight: 700; margin: 0 0 16px 0; }}
+  .card {{ background: #ffffff; border-radius: 12px; padding: 16px 18px; margin: 0 0 16px 0; box-shadow: 0 8px 24px rgba(0,0,0,0.06); border: 1px solid #e6e8f0; }}
+  .card h2 {{ margin: 0 0 8px 0; font-size: 16px; }}
+  .meta {{ color: #5b6071; font-size: 13px; margin: 0 0 10px 0; }}
+  .summary {{ line-height: 1.6; font-size: 14px; color: #1f2430; }}
+  .summary strong {{ color: #111; }}
+  .footer {{ color: #7a7f92; font-size: 12px; margin-top: 24px; }}
+  a {{ color: #2d6cdf; text-decoration: none; }}
+  a:hover {{ text-decoration: underline; }}
 </style>
 </head>
 <body>
   <div class="container">
-    <p class="title">過去3日分のブックマーク要約</p>
-"""
+    <p class="title">過去{days}日分のブックマーク要約</p>
+""".format(days=BATCH_LOOKBACK_DAYS)
     ]
     if not results:
         text_body = text_header + "\n今回は新着対象がありませんでした。"
@@ -83,7 +83,12 @@ def build_email_body(batch_date: datetime, results: List[SummaryResult]) -> Tupl
         html_parts.append("</div></div>")
 
     lines.append(f"\n※ 各要約は最大{SUMMARY_CHAR_LIMIT}文字目安で生成しています。")
+    lines.append("改善の要望があればこちら(https://github.com/takurooper/SummarizeAndMailRaindropLinks/issues)まで。")
+
     html_parts.append(f'<div class="footer">※ 各要約は最大{SUMMARY_CHAR_LIMIT}文字目安で生成しています。</div>')
+    html_parts.append(
+        '<div class="footer">改善の要望があれば<a href="https://github.com/takurooper/SummarizeAndMailRaindropLinks/issues">こちら</a>まで。</div>'
+    )
     html_parts.append("  </div></body></html>")
 
     return "\n".join(lines), "\n".join(html_parts)

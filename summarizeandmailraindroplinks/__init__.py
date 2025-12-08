@@ -6,7 +6,6 @@ __all__ = [
     "raindrop_client",
     "text_extractor",
     "summarizer",
-    "prompts",
     "mailer",
     "email_formatter",
     "orchestrator",

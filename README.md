@@ -59,7 +59,7 @@
 1. ユーザが X / Safari などから **Raindropにリンクを保存**。
 2. 3日に1回、GitHub Actions が Python スクリプトを起動。
 3. スクリプトが Raindrop API からアイテム一覧を取得。
-4. 直近3日以内に追加され、かつ `確認済み` / `配信済み` / `要約失敗` タグが付いていないアイテムを抽出。
+4. 直近X日以内に追加され、かつ `確認済み` / `配信済み` / `要約失敗` タグが付いていないアイテムを抽出。
 5. 各URLに対して HTML を取得し、本文テキストを抽出。
 
    * YouTube URLの場合はタイトル＋説明文を取得。
@@ -85,10 +85,10 @@
 
 ### F-2. 新着リンクの抽出
 
-* バッチ処理時刻（JST）から **過去3日間**に `created` された Raindropアイテムを「新着」と定義する。
+* バッチ処理時刻（JST）から **過去X日間**に `created` された Raindropアイテムを「新着」と定義する。
 * 抽出対象アイテムは、以下すべてを満たすもの：
 
-  1. `created >= (バッチ実行日時 - 3日)`
+  1. `created >= (バッチ実行日時 - X日)`
   2. タグ `確認済み` / `配信済み` / `要約失敗` のいずれも付いていない
 
 ### F-3. 本文取得・要約
@@ -121,14 +121,14 @@
 
 * メール件名フォーマット：
 
-  * `【要約まとめ】YYYY-MM-DD 直近3日版`
+  * `【要約まとめ】YYYY-MM-DD 直近X日版`
 
     * `YYYY-MM-DD` は **バッチ実行日の JST** 日付。
 
 * メール本文の構成例：
 
   ```text
-  こんにちは。過去3日分のブックマークしたリンクの要約です。
+  過去X日分のブックマークしたリンクの要約です。
 
   ====================
   1. タイトル: {Raindropアイテムのtitle}
@@ -351,6 +351,8 @@ main():
   Raindrop API トークン
 * `OPENAI_API_KEY`
 * `SENDGRID_API_KEY`
+* `SUMMARY_SYSTEM_PROMPT`
+  要約用プロンプト文字列（未設定時はデフォルトプロンプトを使用）
 
 ### 9.3 GitHub Actions Variables（機密でないもの）
 
@@ -375,6 +377,7 @@ main():
    export RAINDROP_TOKEN=...
    export OPENAI_API_KEY=...
    export SENDGRID_API_KEY=...
+   export SUMMARY_SYSTEM_PROMPT="（必要に応じてカスタムプロンプトをここに書く）"
    export TO_EMAIL=...
    export FROM_EMAIL=...
    export FROM_NAME="Raindrop要約メール配信サービス"
@@ -395,8 +398,8 @@ main():
 
 ### 9.5 プロンプト編集
 
-* 要約プロンプトは `summarizeandmailraindroplinks/prompts.py` に集約。
-* 文字数制限や出力フォーマットを調整する場合は、このファイルを編集する。
+* 要約プロンプトは GitHub Actions Secret `SUMMARY_SYSTEM_PROMPT` またはローカル環境変数 `SUMMARY_SYSTEM_PROMPT` で上書きする。
+* 未設定時はコード内のデフォルトプロンプト（約500文字制限を含む）が使われる。
 
 ---
 

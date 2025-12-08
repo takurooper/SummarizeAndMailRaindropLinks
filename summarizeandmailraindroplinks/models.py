@@ -20,7 +20,8 @@ class ExtractedContent:
     text: str
     source: str  # e.g., "youtube", "x", "web"
     length: int
-    images: List[str]
+    images: Optional[List[str]] = None
+    image_extraction_attempted: bool = False
 
 
 @dataclass
