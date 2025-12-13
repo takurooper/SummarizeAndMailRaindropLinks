@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import logging
 from typing import Tuple, List
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import httpx
 from lxml import html
 from readability import Document
-
 from .config import IMAGE_TEXT_THRESHOLD, IMAGE_WORD_THRESHOLD, MAX_EXTRACT_CHARS
 from .models import ExtractedContent
 from .utils import count_words, is_cjk_text, trim_text
@@ -50,6 +49,7 @@ def extract_text(url: str) -> ExtractedContent:
         raise ExtractionError("YouTubeリンクは手動確認対象のため自動要約しません。")
     html_text = fetch_html(url)
     text = _extract_readability(html_text, url)
+    hero_image_url = _extract_hero_image_url(html_text, url)
     cleaned = text.strip()
     if not cleaned:
         raise ExtractionError("Extracted text is empty.")
@@ -66,11 +66,12 @@ def extract_text(url: str) -> ExtractedContent:
         images = _extract_images_from_html(html_text)
         image_extraction_attempted = True
     logger.info(
-        "Extracted %s characters from %s (source=%s)%s",
+        "Extracted %s characters from %s (source=%s)%s%s",
         len(trimmed),
         url,
         source,
         "" if image_extraction_attempted else " (image extraction skipped: text too long)",
+        "" if not hero_image_url else " (hero image detected)",
     )
     return ExtractedContent(
         text=trimmed,
@@ -78,6 +79,7 @@ def extract_text(url: str) -> ExtractedContent:
         length=len(trimmed),
         images=images,
         image_extraction_attempted=image_extraction_attempted,
+        hero_image_url=hero_image_url,
     )
 
 
@@ -131,3 +133,43 @@ def _filter_image_urls(urls: List[str]) -> List[str]:
             continue
         cleaned.append(url)
     return cleaned[:5]
+
+
+def _extract_hero_image_url(html_text: str, page_url: str) -> str | None:
+    """
+    Extract a representative header image URL for email display.
+
+    Prefer Open Graph / Twitter card images. If the URL is relative, resolve it using the page URL.
+    """
+    tree = html.fromstring(html_text)
+    candidates: List[str] = []
+    candidates.extend(tree.xpath("//meta[@property='og:image']/@content"))
+    candidates.extend(tree.xpath("//meta[@property='og:image:url']/@content"))
+    candidates.extend(tree.xpath("//meta[@property='og:image:secure_url']/@content"))
+    candidates.extend(tree.xpath("//meta[@name='twitter:image']/@content"))
+    candidates.extend(tree.xpath("//meta[@name='twitter:image:src']/@content"))
+    candidates.extend(tree.xpath("//link[@rel='image_src']/@href"))
+
+    for raw in candidates:
+        if not raw:
+            continue
+        absolute = urljoin(page_url, raw)
+        if _is_probably_tracking_image(absolute):
+            continue
+        if absolute.lower().startswith(("http://", "https://")):
+            return absolute
+    return None
+
+
+def _is_probably_tracking_image(url: str) -> bool:
+    lower = url.lower()
+    blocked_keywords = (
+        "facebook.com/tr?",
+        "doubleclick",
+        "adsystem",
+        "pixel",
+        "analytics",
+        "collect",
+        "tagmanager",
+    )
+    return any(bad in lower for bad in blocked_keywords)

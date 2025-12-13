@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Tuple
 
-from .config import JST, SUMMARY_CHAR_LIMIT, BATCH_LOOKBACK_DAYS
+from .config import BATCH_LOOKBACK_DAYS, JST, SUMMARY_CHAR_LIMIT
 from .models import EmailContext, SummaryResult
 
 
@@ -24,6 +24,7 @@ def build_email_body(batch_date: datetime, results: List[SummaryResult]) -> Tupl
 <html>
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <style>
   body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f7f8fb; color: #1c1d21; margin: 0; padding: 0; }}
   .container {{ max-width: 720px; margin: 0 auto; padding: 24px 16px 40px; }}
@@ -31,6 +32,7 @@ def build_email_body(batch_date: datetime, results: List[SummaryResult]) -> Tupl
   .card {{ background: #ffffff; border-radius: 12px; padding: 16px 18px; margin: 0 0 16px 0; box-shadow: 0 8px 24px rgba(0,0,0,0.06); border: 1px solid #e6e8f0; }}
   .card h2 {{ margin: 0 0 8px 0; font-size: 16px; }}
   .meta {{ color: #5b6071; font-size: 13px; margin: 0 0 10px 0; }}
+  .hero-img {{ width: 100%; max-width: 560px; height: auto; border-radius: 10px; display: block; margin: 12px auto 0; }}
   .summary {{ line-height: 1.6; font-size: 14px; color: #1f2430; }}
   .summary strong {{ color: #111; }}
   .footer {{ color: #7a7f92; font-size: 12px; margin-top: 24px; }}
@@ -71,7 +73,14 @@ def build_email_body(batch_date: datetime, results: List[SummaryResult]) -> Tupl
 
         html_parts.append('<div class="card">')
         html_parts.append(f"<h2>{idx}. {item.title}</h2>")
-        html_parts.append(f'<p class="meta"><a href="{item.link}">こちらをクリック</a> ・ {format_datetime_jst(item.created)}</p>')
+        html_parts.append(
+            f'<p class="meta"><a href="{item.link}">こちらをクリック</a> ・ {format_datetime_jst(item.created)}</p>'
+        )
+        if result.hero_image_url:
+            html_parts.append(
+                f'<img class="hero-img" src="{result.hero_image_url}" alt="" '
+                'style="width:100%;max-width:560px;height:auto;border-radius:10px;display:block;margin:12px auto 0;" />'
+            )
         html_parts.append('<div class="summary"><strong>▼サマリー</strong><br>')
         if result.is_success() and result.summary:
             html_parts.append(result.summary.strip().replace("\n", "<br>"))

@@ -22,6 +22,7 @@ class ExtractedContent:
     length: int
     images: Optional[List[str]] = None
     image_extraction_attempted: bool = False
+    hero_image_url: Optional[str] = None
 
 
 @dataclass
@@ -30,6 +31,7 @@ class SummaryResult:
     status: str  # "success" | "failed"
     summary: Optional[str] = None
     error: Optional[str] = None
+    hero_image_url: Optional[str] = None
 
     def is_success(self) -> bool:
         return self.status == "success"

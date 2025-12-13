@@ -10,7 +10,7 @@ JST = timezone(timedelta(hours=9))
 # 設定値
 
 # 何日前までのリンクを処理するか（日数）
-BATCH_LOOKBACK_DAYS = 1
+BATCH_LOOKBACK_DAYS = 2
 
 # 抽出する最大文字数
 MAX_EXTRACT_CHARS = 10_000
@@ -55,6 +55,9 @@ Always respond in Japanese. If画像が渡される場合はその内容も考�
 
 # 画像付きリンクを要約するために必要な最小テキスト文字数
 IMAGE_TEXT_THRESHOLD = 1000
+
+# 画像付きリンクを要約するために必要な最小単語数（主に英語など非CJK）
+IMAGE_WORD_THRESHOLD = 500
 
 # 画像付きリンクを要約するために必要な最小画像枚数
 MIN_IMAGES_FOR_SUMMARY = 3

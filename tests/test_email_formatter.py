@@ -33,3 +33,15 @@ def test_build_email_body_success_and_failure():
     assert "Summary text" in text_body
     assert "要約に失敗" in text_body
     assert '<a href="https://example.com">こちらをクリック</a>' in html_body
+
+
+def test_build_email_body_includes_hero_image_when_present():
+    item = _item()
+    success = SummaryResult(
+        item=item,
+        status="success",
+        summary="Summary text",
+        hero_image_url="https://example.com/hero.png",
+    )
+    _, html_body = build_email_body(datetime(2024, 12, 7, tzinfo=timezone.utc), [success])
+    assert 'src="https://example.com/hero.png"' in html_body

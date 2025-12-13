@@ -83,11 +83,36 @@ def run(settings: config.Settings) -> List[SummaryResult]:
                         content.length,
                         content.source,
                     )
-                summary_text = summarizer.summarize(content.text, content.images)
-                results.append(SummaryResult(item=item, status="success", summary=summary_text))
-            except (SummaryRateLimitError, SummaryConnectionError) as exc:
-                logger.exception("OpenAI transient failure for item %s: %s", item.id, exc)
-                results.append(SummaryResult(item=item, status="failed", error=str(exc)))
+                try:
+                    summary_text = summarizer.summarize(content.text, content.images)
+                    results.append(
+                        SummaryResult(
+                            item=item,
+                            status="success",
+                            summary=summary_text,
+                            hero_image_url=content.hero_image_url,
+                        )
+                    )
+                except (SummaryRateLimitError, SummaryConnectionError) as exc:
+                    logger.exception("OpenAI transient failure for item %s: %s", item.id, exc)
+                    results.append(
+                        SummaryResult(
+                            item=item,
+                            status="failed",
+                            error=str(exc),
+                            hero_image_url=content.hero_image_url,
+                        )
+                    )
+                except SummaryError as exc:
+                    logger.exception("Summarization failed for item %s: %s", item.id, exc)
+                    results.append(
+                        SummaryResult(
+                            item=item,
+                            status="failed",
+                            error=str(exc),
+                            hero_image_url=content.hero_image_url,
+                        )
+                    )
             except (ExtractionError, SummaryError) as exc:
                 logger.exception("Failed to process item %s: %s", item.id, exc)
                 results.append(SummaryResult(item=item, status="failed", error=str(exc)))
