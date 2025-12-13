@@ -12,6 +12,17 @@ from .utils import append_note, parse_raindrop_datetime
 
 logger = logging.getLogger(__name__)
 
+class RaindropError(Exception):
+    """Raised when Raindrop operations fail."""
+
+
+class RaindropConnectionError(RaindropError):
+    """Raised when Raindrop is unreachable (network/timeout)."""
+
+
+class RaindropApiError(RaindropError):
+    """Raised when Raindrop returns an error response."""
+
 
 class RaindropClient:
     def __init__(self, token: str, base_url: str = "https://api.raindrop.io"):
@@ -50,8 +61,23 @@ class RaindropClient:
         merged_tags = list({*item.tags, *extra_tags})
         payload = {"note": merged_note, "tags": merged_tags}
         logger.info("Updating Raindrop item %s with tags=%s", item.id, merged_tags)
-        response = self._client.put(f"/rest/v1/raindrop/{item.id}", json=payload)
-        response.raise_for_status()
+        try:
+            response = self._client.put(f"/rest/v1/raindrop/{item.id}", json=payload)
+            response.raise_for_status()
+        except httpx.RequestError as exc:
+            raise RaindropConnectionError(f"Raindrop update failed: {exc}") from exc
+        except httpx.HTTPStatusError as exc:
+            raise RaindropApiError(f"Raindrop update returned error: {exc}") from exc
+
+    def delete_item(self, item_id: int) -> None:
+        logger.info("Deleting duplicate Raindrop item %s", item_id)
+        try:
+            response = self._client.delete(f"/rest/v1/raindrop/{item_id}")
+            response.raise_for_status()
+        except httpx.RequestError as exc:
+            raise RaindropConnectionError(f"Raindrop delete failed: {exc}") from exc
+        except httpx.HTTPStatusError as exc:
+            raise RaindropApiError(f"Raindrop delete returned error: {exc}") from exc
 
     @staticmethod
     def _to_model(raw: dict) -> RaindropItem:

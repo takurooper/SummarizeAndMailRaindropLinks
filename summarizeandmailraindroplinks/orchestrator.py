@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 import logging
-from typing import List
+from typing import Dict, List, Tuple
 
 from . import config
 from .config import BATCH_LOOKBACK_DAYS, TAG_DELIVERED, TAG_FAILED
 from .email_formatter import build_email_body, build_email_subject
 from .mailer import MailError, Mailer
-from .models import SummaryResult
-from .raindrop_client import RaindropClient
+from .models import RaindropItem, SummaryResult
+from .raindrop_client import RaindropApiError, RaindropClient, RaindropConnectionError
 from .summarizer import Summarizer, SummaryConnectionError, SummaryError, SummaryRateLimitError
 from .text_extractor import ExtractionError, extract_text
-from .utils import filter_new_items, threshold_from_now, to_jst, utc_now
+
+from .utils import canonicalize_url, choose_preferred_duplicate, filter_new_items, threshold_from_now, to_jst, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,16 @@ def run(settings: config.Settings) -> List[SummaryResult]:
     try:
         raw_items = raindrop.fetch_unsorted_items()
         targets = filter_new_items(raw_items, threshold)
+        targets, duplicates = _dedupe_targets(targets)
+        if duplicates:
+            logger.info("Detected %s duplicate items; deleting redundant ones", len(duplicates))
+            for dup in duplicates:
+                try:
+                    raindrop.delete_item(dup.id)
+                except RaindropConnectionError:
+                    raise
+                except RaindropApiError as exc:
+                    logger.warning("Failed to delete duplicate item id=%s: %s", dup.id, exc)
         logger.info("Processing %s target items (from %s total)", len(targets), len(raw_items))
 
         results: List[SummaryResult] = []
@@ -131,3 +142,30 @@ def _count_success(results: List[SummaryResult]) -> int:
 
 def _count_failure(results: List[SummaryResult]) -> int:
     return len([r for r in results if not r.is_success()])
+
+
+def _dedupe_targets(targets: List[RaindropItem]) -> Tuple[List[RaindropItem], List[RaindropItem]]:
+    by_key: Dict[str, List[RaindropItem]] = {}
+    for item in targets:
+        key = canonicalize_url(item.link)
+        by_key.setdefault(key, []).append(item)
+
+    kept: List[RaindropItem] = []
+    duplicates: List[RaindropItem] = []
+    for key, items in by_key.items():
+        if len(items) == 1:
+            kept.append(items[0])
+            continue
+        preferred = choose_preferred_duplicate(items)
+        kept.append(preferred)
+        for item in items:
+            if item.id != preferred.id:
+                duplicates.append(item)
+        logger.info(
+            "Duplicate URL group: canonical=%s kept=%s deleted=%s",
+            key,
+            preferred.link,
+            [i.link for i in items if i.id != preferred.id],
+        )
+
+    return kept, duplicates
