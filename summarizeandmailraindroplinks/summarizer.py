@@ -75,24 +75,30 @@ class Summarizer:
                 include_images,
             )
         user_content = self._build_user_content(text, images or [], include_images)
-        try:
-            response = self._client.chat.completions.create(
-                model=self._model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": self._system_prompt,
-                    },
-                    {"role": "user", "content": user_content},
-                ],
-                temperature=0.3,
-            )
-        except self._rate_limit_error as exc:  # type: ignore[misc]
-            raise SummaryRateLimitError(f"OpenAI rate limit: {exc}") from exc
-        except self._connection_errors as exc:  # type: ignore[misc]
-            raise SummaryConnectionError(f"OpenAI connection failed: {exc}") from exc
-        except Exception as exc:  # noqa: BLE001
-            raise SummaryError(f"OpenAI API call failed: {exc}") from exc
+        for attempt in range(2):
+            try:
+                response = self._client.chat.completions.create(
+                    model=self._model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": self._system_prompt,
+                        },
+                        {"role": "user", "content": user_content},
+                    ],
+                    temperature=0.3,
+                )
+                break
+            except Exception as exc:  # noqa: BLE001
+                status_code = _extract_status_code(exc)
+                if attempt == 0 and status_code in {502, 503, 504}:
+                    logger.warning("OpenAI transient error (status=%s); retrying once", status_code)
+                    continue
+                if isinstance(exc, self._rate_limit_error):  # type: ignore[arg-type]
+                    raise SummaryRateLimitError(f"OpenAI rate limit: {exc}") from exc
+                if isinstance(exc, self._connection_errors):  # type: ignore[arg-type]
+                    raise SummaryConnectionError(f"OpenAI connection failed: {exc}") from exc
+                raise SummaryError(f"OpenAI API call failed: {exc}") from exc
 
         if not response.choices:
             raise SummaryError("OpenAI response has no choices.")
@@ -116,3 +122,15 @@ class Summarizer:
         for img in images:
             content.append({"type": "image_url", "image_url": {"url": img}})
         return content
+
+
+def _extract_status_code(exc: Exception) -> Optional[int]:
+    status_code = getattr(exc, "status_code", None)
+    if isinstance(status_code, int):
+        return status_code
+    response = getattr(exc, "response", None)
+    if response is not None:
+        code = getattr(response, "status_code", None)
+        if isinstance(code, int):
+            return code
+    return None

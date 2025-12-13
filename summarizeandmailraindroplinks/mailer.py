@@ -26,8 +26,22 @@ class Mailer:
             plain_text_content=text_body,
             html_content=html_body,
         )
-        try:
-            response = self._client.send(mail)
-            logger.info("Mail sent with status %s", response.status_code)
-        except Exception as exc:  # noqa: BLE001
-            raise MailError(f"Failed to send email: {exc}") from exc
+        last_exc: Exception | None = None
+        for attempt in range(2):
+            try:
+                response = self._client.send(mail)
+                if response.status_code in {502, 503, 504} and attempt == 0:
+                    logger.warning("SendGrid transient error (status=%s); retrying once", response.status_code)
+                    continue
+                if response.status_code >= 400:
+                    raise MailError(f"SendGrid returned error status: {response.status_code}")
+                logger.info("Mail sent with status %s", response.status_code)
+                return
+            except Exception as exc:  # noqa: BLE001
+                last_exc = exc
+                status_code = getattr(exc, "status_code", None)
+                if isinstance(status_code, int) and status_code in {502, 503, 504} and attempt == 0:
+                    logger.warning("SendGrid transient exception (status=%s); retrying once", status_code)
+                    continue
+                break
+        raise MailError(f"Failed to send email: {last_exc}") from last_exc

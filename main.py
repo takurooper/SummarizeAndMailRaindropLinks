@@ -19,9 +19,13 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        run(settings)
+        results = run(settings)
     except Exception as exc:  # noqa: BLE001
         logging.exception("Batch run failed: %s", exc)
+        sys.exit(1)
+
+    if results and all(not r.is_success() for r in results):
+        logging.error("All raindrops failed in this batch.")
         sys.exit(1)
 
 
