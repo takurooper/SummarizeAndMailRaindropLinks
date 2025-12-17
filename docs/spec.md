@@ -345,6 +345,7 @@ main():
   * `FROM_EMAIL`
   * `FROM_NAME`
   * （任意）`OPENAI_MODEL`
+  * （任意）`BATCH_LOOKBACK_DAYS`（未設定なら `1`）
 
 ### 8.3 GitHub Actions Variables（機密でないもの）
 
@@ -352,6 +353,7 @@ main():
 * `FROM_EMAIL` 送信元メールアドレス
 * `FROM_NAME` 送信元表示名（例: `Raindrop要約メール配信サービス`）
 * （任意）`OPENAI_MODEL` 使用モデル名（デフォルト `gpt-4.1-mini`）
+* （任意）`BATCH_LOOKBACK_DAYS` バッチで対象とする過去日数（デフォルト `1`）
 
 ### 8.4 ローカル開発セットアップ
 
@@ -375,6 +377,7 @@ main():
    export FROM_EMAIL=...
    export FROM_NAME="Raindrop要約メール配信サービス"
    export OPENAI_MODEL="gpt-4.1-mini"
+   export BATCH_LOOKBACK_DAYS=1
    ```
 
 5. 実行

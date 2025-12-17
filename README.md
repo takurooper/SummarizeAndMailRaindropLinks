@@ -118,6 +118,7 @@ GitHub のリポジトリ画面で `Settings` → `Secrets and variables` → `A
 - `FROM_EMAIL`（送信元メールアドレス）
 - `FROM_NAME`（送信元表示名。例: `Raindrop要約メール配信サービス`）
 - （任意）`OPENAI_MODEL`（例: `gpt-4.1-mini`）
+- （任意）`BATCH_LOOKBACK_DAYS`（バッチで対象とする過去日数。未設定なら `1`）
 
 ---
 

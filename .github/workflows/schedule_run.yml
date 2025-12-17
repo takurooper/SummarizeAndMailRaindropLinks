@@ -33,4 +33,5 @@ jobs:
           FROM_EMAIL: ${{ vars.FROM_EMAIL }}
           FROM_NAME: ${{ vars.FROM_NAME }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+          BATCH_LOOKBACK_DAYS: ${{ vars.BATCH_LOOKBACK_DAYS }}
         run: python main.py

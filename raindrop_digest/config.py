@@ -6,11 +6,26 @@ from datetime import timedelta, timezone
 
 JST = timezone(timedelta(hours=9))
 
+def _env_int(name: str, default: int, *, min_value: int | None = None) -> int:
+    raw_value = os.getenv(name)
+    if raw_value is None or not raw_value.strip():
+        return default
+
+    try:
+        parsed = int(raw_value.strip())
+    except ValueError as exc:
+        raise ValueError(f"Environment variable {name} must be an integer, got {raw_value!r}.") from exc
+
+    if min_value is not None and parsed < min_value:
+        raise ValueError(f"Environment variable {name} must be >= {min_value}, got {parsed}.")
+
+    return parsed
+
 # --------------------------------
 # 設定値
 
 # 何日前までのリンクを処理するか（日数）
-BATCH_LOOKBACK_DAYS = 1
+BATCH_LOOKBACK_DAYS = _env_int("BATCH_LOOKBACK_DAYS", default=1, min_value=1)
 
 # 抽出する最大文字数
 MAX_EXTRACT_CHARS = 10_000
