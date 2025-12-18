@@ -72,27 +72,16 @@ def run(settings: config.Settings) -> List[SummaryResult]:
             logger.info("link=%s", item.link)
             try:
                 content = extract_text(item.link)
-                if content.image_extraction_attempted:
-                    logger.info(
-                        "Extracted content: chars=%s images=%s source=%s",
-                        content.length,
-                        len(content.images or []),
-                        content.source,
-                    )
-                else:
-                    logger.info(
-                        "Extracted content: chars=%s source=%s (image extraction skipped: text too long)",
-                        content.length,
-                        content.source,
-                    )
+                logger.info("Extracted content: chars=%s source=%s", content.length, content.source)
                 try:
-                    summary_text = summarizer.summarize(content.text, content.images)
+                    summary_text = summarizer.summarize(content.text)
                     results.append(
                         SummaryResult(
                             item=item,
                             status="success",
                             summary=summary_text,
                             hero_image_url=content.hero_image_url,
+                            source_length=content.length,
                         )
                     )
                 except (SummaryRateLimitError, SummaryConnectionError) as exc:
@@ -103,6 +92,7 @@ def run(settings: config.Settings) -> List[SummaryResult]:
                             status="failed",
                             error=str(exc),
                             hero_image_url=content.hero_image_url,
+                            source_length=content.length,
                         )
                     )
                 except SummaryError as exc:
@@ -113,6 +103,7 @@ def run(settings: config.Settings) -> List[SummaryResult]:
                             status="failed",
                             error=str(exc),
                             hero_image_url=content.hero_image_url,
+                            source_length=content.length,
                         )
                     )
             except (ExtractionError, SummaryError) as exc:

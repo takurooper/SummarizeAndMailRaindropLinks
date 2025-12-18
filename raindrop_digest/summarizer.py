@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, List, Optional, Sequence, Tuple, Type, TYPE_CHECKING
+from typing import Any, Optional, Tuple, Type, TYPE_CHECKING
 
 try:
     from openai import APIConnectionError, APITimeoutError, OpenAI, RateLimitError
@@ -17,8 +17,7 @@ if TYPE_CHECKING:  # pragma: no cover - type checking only
 else:
     OpenAIType = Any
 
-from .config import DEFAULT_SYSTEM_PROMPT, IMAGE_TEXT_THRESHOLD, IMAGE_WORD_THRESHOLD, MIN_IMAGES_FOR_SUMMARY
-from .utils import count_words, is_cjk_text
+from .config import DEFAULT_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -64,18 +63,8 @@ class Summarizer:
             return Exception, (Exception, Exception)
         return RateLimitError, (APIConnectionError, APITimeoutError)
 
-    def summarize(self, text: str, images: Optional[List[str]] = None) -> str:
-        include_images = self._should_include_images(text, images)
-        if images is None:
-            logger.info("Summarization request: chars=%s (image extraction skipped)", len(text))
-        else:
-            logger.info(
-                "Summarization request: chars=%s images=%s include_images=%s",
-                len(text),
-                len(images),
-                include_images,
-            )
-        user_content = self._build_user_content(text, images or [], include_images)
+    def summarize(self, text: str) -> str:
+        logger.info("Summarization request: chars=%s", len(text))
         for attempt in range(2):
             try:
                 response = self._client.chat.completions.create(
@@ -85,7 +74,7 @@ class Summarizer:
                             "role": "system",
                             "content": self._system_prompt,
                         },
-                        {"role": "user", "content": user_content},
+                        {"role": "user", "content": text},
                     ],
                     temperature=0.3,
                 )
@@ -108,25 +97,6 @@ class Summarizer:
             raise SummaryError("OpenAI returned empty content.")
         logger.info("Summary generated (%s chars)", len(content))
         return content.strip()
-
-    @staticmethod
-    def _should_include_images(text: str, images: Optional[Sequence[str]]) -> bool:
-        if images is None:
-            return False
-        if len(images) < MIN_IMAGES_FOR_SUMMARY:
-            return False
-        if is_cjk_text(text):
-            return len(text) <= IMAGE_TEXT_THRESHOLD
-        return count_words(text) <= IMAGE_WORD_THRESHOLD
-
-    @staticmethod
-    def _build_user_content(text: str, images: Sequence[str], include_images: bool) -> list:
-        if not include_images or not images:
-            return [{"type": "text", "text": text}]
-        content = [{"type": "text", "text": text}]
-        for img in images:
-            content.append({"type": "image_url", "image_url": {"url": img}})
-        return content
 
 
 def _extract_status_code(exc: Exception) -> Optional[int]:

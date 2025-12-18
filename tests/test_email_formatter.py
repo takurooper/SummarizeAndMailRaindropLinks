@@ -45,3 +45,16 @@ def test_build_email_body_includes_hero_image_when_present():
     )
     _, html_body = build_email_body(datetime(2024, 12, 7, tzinfo=timezone.utc), [success])
     assert 'src="https://example.com/hero.png"' in html_body
+
+
+def test_build_email_body_includes_short_article_disclaimer_when_under_threshold():
+    item = _item()
+    success = SummaryResult(
+        item=item,
+        status="success",
+        summary="Summary text",
+        source_length=999,
+    )
+    text_body, html_body = build_email_body(datetime(2024, 12, 7, tzinfo=timezone.utc), [success])
+    assert "この記事は文字数が1000未満のため、情報量が不足している可能性があります。" in text_body
+    assert "この記事は文字数が1000未満のため、情報量が不足している可能性があります。" in html_body

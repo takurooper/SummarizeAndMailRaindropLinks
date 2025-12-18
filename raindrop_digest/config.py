@@ -32,14 +32,14 @@ MAX_EXTRACT_CHARS = 10_000
 
 # 要約の最大文字数
 SUMMARY_CHAR_LIMIT = 600
-IMAGE_TEXT_THRESHOLD = 1000
-IMAGE_WORD_THRESHOLD = 500
-MIN_IMAGES_FOR_SUMMARY = 3
+
+# 本文が短い記事への注意文を入れる閾値（文字数）
+SHORT_ARTICLE_CHAR_THRESHOLD = 1000
 
 DEFAULT_SYSTEM_PROMPT = """
 You are a Japanese summarization bot.
 Produce a concise summary within 500 characters.
-Always respond in Japanese. If画像が渡される場合はその内容も考慮して要約する（本文から推測できない具体情報を補う程度でよい）。
+Always respond in Japanese.
 
 # 要約ルール（全ジャンル共通）
 - 論理的・簡潔・構造的にまとめること。
@@ -67,15 +67,6 @@ Always respond in Japanese. If画像が渡される場合はその内容も考�
 1) 一行要約
 2) 要点（箇条書き3〜6行）
 """.strip()
-
-# 画像付きリンクを要約するために必要な最小テキスト文字数
-IMAGE_TEXT_THRESHOLD = 1000
-
-# 画像付きリンクを要約するために必要な最小単語数（主に英語など非CJK）
-IMAGE_WORD_THRESHOLD = 500
-
-# 画像付きリンクを要約するために必要な最小画像枚数
-MIN_IMAGES_FOR_SUMMARY = 3
 
 # Raindrop.io のタグ
 TAG_CONFIRMED = "確認済み"

@@ -7,9 +7,9 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from lxml import html
 from readability import Document
-from .config import IMAGE_TEXT_THRESHOLD, IMAGE_WORD_THRESHOLD, MAX_EXTRACT_CHARS
+from .config import MAX_EXTRACT_CHARS
 from .models import ExtractedContent
-from .utils import count_words, is_cjk_text, trim_text
+from .utils import trim_text
 
 logger = logging.getLogger(__name__)
 
@@ -54,31 +54,17 @@ def extract_text(url: str) -> ExtractedContent:
     if not cleaned:
         raise ExtractionError("Extracted text is empty.")
     trimmed = trim_text(cleaned, MAX_EXTRACT_CHARS)
-    images = None
-    image_extraction_attempted = False
-    should_attempt_images = False
-    if is_cjk_text(trimmed):
-        should_attempt_images = len(trimmed) <= IMAGE_TEXT_THRESHOLD
-    else:
-        should_attempt_images = count_words(trimmed) <= IMAGE_WORD_THRESHOLD
-
-    if should_attempt_images:
-        images = _extract_images_from_html(html_text)
-        image_extraction_attempted = True
     logger.info(
-        "Extracted %s characters from %s (source=%s)%s%s",
+        "Extracted %s characters from %s (source=%s)%s",
         len(trimmed),
         url,
         source,
-        "" if image_extraction_attempted else " (image extraction skipped: text too long)",
         "" if not hero_image_url else " (hero image detected)",
     )
     return ExtractedContent(
         text=trimmed,
         source=source,
         length=len(trimmed),
-        images=images,
-        image_extraction_attempted=image_extraction_attempted,
         hero_image_url=hero_image_url,
     )
 
@@ -107,32 +93,6 @@ def _extract_readability(html_text: str, url: str) -> str:
     tree = html.fromstring(summary_html)
     text = tree.text_content()
     return text
-
-
-def _extract_images_from_html(html_text: str) -> List[str]:
-    tree = html.fromstring(html_text)
-    raw_urls = tree.xpath("//img/@src")
-    filtered = _filter_image_urls(raw_urls)
-    return filtered
-
-
-def _filter_image_urls(urls: List[str]) -> List[str]:
-    allowed_ext = (".jpg", ".jpeg", ".png", ".webp", ".gif")
-    blocked_keywords = ("facebook.com/tr?", "doubleclick", "adsystem", "pixel", "analytics", "collect")
-    cleaned: List[str] = []
-    for url in urls:
-        if not url:
-            continue
-        lower = url.lower()
-        if not (lower.startswith("http://") or lower.startswith("https://")):
-            continue
-        if any(bad in lower for bad in blocked_keywords):
-            continue
-        base = lower.split("?", 1)[0]
-        if not any(base.endswith(ext) for ext in allowed_ext):
-            continue
-        cleaned.append(url)
-    return cleaned[:5]
 
 
 def _extract_hero_image_url(html_text: str, page_url: str) -> str | None:

@@ -3,12 +3,20 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Tuple
 
-from .config import BATCH_LOOKBACK_DAYS, JST, SUMMARY_CHAR_LIMIT
+from .config import BATCH_LOOKBACK_DAYS, JST, SHORT_ARTICLE_CHAR_THRESHOLD, SUMMARY_CHAR_LIMIT
 from .models import EmailContext, SummaryResult
 
 
 def format_datetime_jst(dt: datetime) -> str:
     return dt.astimezone(JST).strftime("%Y-%m-%d %H:%M")
+
+SHORT_ARTICLE_DISCLAIMER = "この記事は文字数が1000未満のため、情報量が不足している可能性があります。"
+
+
+def _needs_short_article_disclaimer(source_length: int | None) -> bool:
+    if source_length is None:
+        return False
+    return source_length < SHORT_ARTICLE_CHAR_THRESHOLD
 
 
 def build_email_subject(batch_date: datetime) -> str:
@@ -62,6 +70,8 @@ def build_email_body(batch_date: datetime, results: List[SummaryResult]) -> Tupl
         lines.append(f"{idx}. タイトル: {item.title}")
         lines.append(f"URL: {item.link}")
         lines.append(f"追加日時: {format_datetime_jst(item.created)}")
+        if _needs_short_article_disclaimer(result.source_length):
+            lines.append(SHORT_ARTICLE_DISCLAIMER)
         lines.append("\n▼サマリー")
         if result.is_success() and result.summary:
             lines.append(result.summary.strip())
@@ -76,6 +86,8 @@ def build_email_body(batch_date: datetime, results: List[SummaryResult]) -> Tupl
         html_parts.append(
             f'<p class="meta"><a href="{item.link}">こちらをクリック</a> ・ {format_datetime_jst(item.created)}</p>'
         )
+        if _needs_short_article_disclaimer(result.source_length):
+            html_parts.append(f'<p class="meta">{SHORT_ARTICLE_DISCLAIMER}</p>')
         if result.hero_image_url:
             html_parts.append(
                 f'<img class="hero-img" src="{result.hero_image_url}" alt="" '

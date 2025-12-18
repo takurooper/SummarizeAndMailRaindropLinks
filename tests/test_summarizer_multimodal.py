@@ -32,12 +32,12 @@ class FakeOpenAI:
             return Response()
 
 
-def test_include_images_when_short_text_and_many_images():
+def test_sends_user_content_as_plain_text():
     fake_client = FakeOpenAI()
     s = Summarizer(api_key="dummy", model="gpt-4.1-mini", client=fake_client)
-    s.summarize("短いテキスト", ["img1", "img2", "img3"])
+    s.summarize("短いテキスト")
     user_content = fake_client.last_messages[1]["content"]  # type: ignore[index]
-    assert any(part.get("type") == "image_url" for part in user_content)
+    assert user_content == "短いテキスト"
 
 
 def test_openai_retry_on_503():
@@ -60,39 +60,4 @@ def test_openai_retry_on_503():
 
     fake_client = FlakyOpenAI()
     s = Summarizer(api_key="dummy", model="gpt-4.1-mini", client=fake_client)
-    assert s.summarize("短いテキスト", ["img1", "img2", "img3"]) == "dummy"
-
-
-def test_text_only_when_insufficient_images():
-    fake_client = FakeOpenAI()
-    s = Summarizer(api_key="dummy", model="gpt-4.1-mini", client=fake_client)
-    s.summarize("短いテキスト", ["img1"])
-    user_content = fake_client.last_messages[1]["content"]  # type: ignore[index]
-    assert all(part.get("type") == "text" for part in user_content)
-
-
-def test_text_only_when_long_text():
-    fake_client = FakeOpenAI()
-    s = Summarizer(api_key="dummy", model="gpt-4.1-mini", client=fake_client)
-    long_text = "長" * 1200  # exceeds IMAGE_TEXT_THRESHOLD to force text-only
-    s.summarize(long_text, ["img1", "img2", "img3", "img4"])
-    user_content = fake_client.last_messages[1]["content"]  # type: ignore[index]
-    assert all(part.get("type") == "text" for part in user_content)
-
-
-def test_text_only_when_english_exceeds_word_threshold():
-    fake_client = FakeOpenAI()
-    s = Summarizer(api_key="dummy", model="gpt-4.1-mini", client=fake_client)
-    long_english = ("word " * 600).strip()
-    s.summarize(long_english, ["img1", "img2", "img3"])
-    user_content = fake_client.last_messages[1]["content"]  # type: ignore[index]
-    assert all(part.get("type") == "text" for part in user_content)
-
-
-def test_include_images_when_english_within_word_threshold():
-    fake_client = FakeOpenAI()
-    s = Summarizer(api_key="dummy", model="gpt-4.1-mini", client=fake_client)
-    short_english = ("word " * 400).strip()
-    s.summarize(short_english, ["img1", "img2", "img3"])
-    user_content = fake_client.last_messages[1]["content"]  # type: ignore[index]
-    assert any(part.get("type") == "image_url" for part in user_content)
+    assert s.summarize("短いテキスト") == "dummy"

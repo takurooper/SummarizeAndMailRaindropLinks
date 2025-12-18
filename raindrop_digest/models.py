@@ -20,8 +20,6 @@ class ExtractedContent:
     text: str
     source: str  # e.g., "youtube", "x", "web"
     length: int
-    images: Optional[List[str]] = None
-    image_extraction_attempted: bool = False
     hero_image_url: Optional[str] = None
 
 
@@ -32,6 +30,7 @@ class SummaryResult:
     summary: Optional[str] = None
     error: Optional[str] = None
     hero_image_url: Optional[str] = None
+    source_length: Optional[int] = None
 
     def is_success(self) -> bool:
         return self.status == "success"
